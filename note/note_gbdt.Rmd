@@ -1,0 +1,44 @@
+---
+title: "Note of Gradient Boosting Decision Tree"
+author: Jiaying wu
+output: html_notebook
+---
+
+### Overview
+
+In this note we focus on these 3 Gradient Boosting Decision Tree algorithms
+
+* [XGBoost](https://xgboost.readthedocs.io/en/latest/)
+
+* [LightGBM](https://lightgbm.readthedocs.io/en/latest/)
+
+* [CatBoost](https://catboost.ai)
+
+
+### What is Gradient Boosting Decision Tree?
+
+
+
+
+### XGBoost
+
+
+
+
+
+
+
+
+### LightGBM
+
+
+
+
+
+
+
+
+
+### CatBoost
+
+
