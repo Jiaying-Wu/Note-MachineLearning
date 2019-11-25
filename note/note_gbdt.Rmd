@@ -1,12 +1,12 @@
 ---
 title: "Note of Gradient Boosting Decision Tree"
-author: Jiaying wu
+author: Jiaying Wu
 output: html_notebook
 ---
 
 ### Overview
 
-In this note we focus on these 3 Gradient Boosting Decision Tree algorithms
+In this note, first we will talk about the general framework of Gradient Boosting Decision Tree (GBDT), then we will focus on these 3 Gradient Boosting Decision Tree algorithms:
 
 * [XGBoost](https://xgboost.readthedocs.io/en/latest/)
 
@@ -17,6 +17,119 @@ In this note we focus on these 3 Gradient Boosting Decision Tree algorithms
 
 ### What is Gradient Boosting Decision Tree?
 
+Gradient Boosting Decision Tree is an additive model,  the prediction of each observation in this model is the sum of each belonging gain of $D$ depths in $T$ trees.
+
+**As the predicted value of each observation start from 0, and each tree have the same depths (Not Pruned GBDT).** 
+
+The model can written as:
+
+$$
+\hat{y_{i}} = 0 + \sum^{T}_{t = 1} f_{t}(x_{i}) = \sum^{T}_{t = 1} f_{t}(x_{i}) = \sum^{T}_{t = 1} \sum^{D}_{d = 1} gain_{\text{{t, d, l}}} \\
+\text{where} \space l \in \{1, 2, ..., 2^d \}
+$$
+
+$\hat{y_{i}}$ is the predicted value of observation $i$.
+
+$x_{i}$ is the given information of observation $i$.
+
+$f_{t}$ is the $t_{th}$ decision tree.
+
+$f_{t}(x_{i})$ is sum of gain in $t_{th}$ decision tree.
+
+In $gain_{\text{{t, d, l}}}$, $t$ determine the $t_{th}$ tree, $d$ determine the $d_{th}$ depth, $l$ determine the $l_{th}$ leaf.
+
+In each depth, one observation can only have one gain value. Hence, the predicted value in **not pruned GBDT** of observation $i$ is the sum of the $(T*D)$ gain value.
+
+**Pruned means we prune the leaves of GBDT from bottom to top of each tree.**
+
+![](http://arogozhnikov.github.io/images/gbdt_attractive_picture.png)
+
+(Image 1 from [Gradient Boosting explained demonstration](http://arogozhnikov.github.io/2016/06/24/gradient_boosting_explained.html))
+
+**The image 1 is the pruned Gradient Boosting Decison Tree.**
+
+The image 1 shown, observations $i$ end up with {tree 1, depth 3, leaf 2}, end up wth {tree 2, depth 2, leaf 3} ..., and end up wth {tree K, depth 2, leaf 2}. Assume we start from 0 of all observations, the predicted value of observation $i$ is,
+
+$$
+\begin{align*}
+\hat{y_{i}} &=  0 +(gain_{\text{{1, 1, 1}}} + gain_{\text{{1, 2, 1}}} + gain_{\text{{1, 3, 2}}}) + (gain_{\text{{2, 1, 2}}} + gain_{\text{{2, 2, 3}}} + gain_{\text{{2, 2, 3}}}) + ... + (gain_{\text{{K, 1, 1}}} +gain_{\text{{K, 2, 2}}}) \\ 
+&= f_{1}(x_{i}) + f_{2}(x_{i}) + ... + f_{K}(x_{i})
+\end{align*}
+$$
+
+In $gain_{\text{{t, d, l}}}$, $t$ determine the $t_{th}$ tree, $d$ determine the $d_{th}$ depth, $l$ determine the $l_{th}$ leaf.
+
+The possible number of leaf in depth $d$ is $2^{d}$.
+
+![](https://raw.githubusercontent.com/dmlc/web-data/master/xgboost/model/twocart.png)
+
+(Image 2 from dmlc/xgboost)
+
+As image 2 shown, the boy end up with {tree 1, depth 1, leaf 1} and {tree 2, depth 1, leaf 1}, the predicted value is,
+
+$$
+\hat{y_{boy}} = gain_{\text{{1, 1, 1}}} + gain_{\text{{2, 1, 1}}} = 2 + 0.9 = 2.9
+$$
+
+The grandpa end up with {tree 1, depth 1, leaf 2} and {tree 2, depth 1, leaf 2}, the predicted value is,
+
+$$
+\hat{y_{grandpa}} = gain_{\text{{1, 1, 2}}} + gain_{\text{{2, 1, 2}}} = -1 - 0.9 = 1.9
+$$
+
+The girl in pink dress end up with {tree 1, depth 1, leaf 1} and {tree 2, depth 1, leaf 2}, the predicted value is,
+
+$$
+\hat{y_{girl}} = gain_{\text{{1, 1, 1}}} + gain_{\text{{2, 1, 2}}} = 2 - 0.9 = 1.1
+$$
+
+
+### How Gradient Boosting Decision Tree work?
+
+Assuming we measure the loss using **total sum squared error**, our **goal** is to **minimize** the total sum squared error.
+
+$$
+Loss = \sum^{n}_{i = 1} (\hat{y_{i}} - y_{i})^2
+$$
+
+As the **predicted value start from 0**, the loss of first node in first tree just the sum squared value of the label.
+
+$$
+Loss_{1, 0, 1} = \sum^{n}_{i = 1} (\hat{y_{i}} - y_{i})^2 = \sum^{n}_{i = 1} (0 - y_{i})^2 = \sum^{n}_{i = 1} (- y_{i})^2 = \sum^{n}_{i = 1} (Residual_{i \text{{1,0,1}}})^2 \\
+\text{where}\space \mathbb{E}(Residual_{0, i}) \neq 0
+$$
+
+$Loss_{0, 0, 1}$ determine the initial loss in {tree 1, depth 0, leaf 1} as the predicted value start at 0.
+
+$Residual_{0, i}$ determine the initial residual of observation $i$ as predicted value start at 0.
+
+After the initial node of fist tree, the model trying to **find the best split** that minimize the loss.
+
+$$
+\text{min} \space Loss = min \space  [\sum^{L}_{i = 1} (-y_{i} + \overline{y_{L}})^2 + \sum^{R}_{j = 1} (-y_{j} + \overline{y_{R}})^2] \\
+\text{where} \space \overline{y_{L}} = \frac{1}{L}\sum^{L}_{i = 1} -y_{i}, \space \overline{y_{R}} = \frac{1}{R}\sum^{R}_{j = 1} -y_{j}, \space L + R = S
+$$
+
+$S$ is the sample size in the node, $L$ is the sample size in the left leaf, $R$ is the sample size in the right leaf.
+
+$y_{i}$ is label of observation $i$ in the left leaf, $y_{j}$ is label of observation $j$ in the right leaf.
+
+$\overline{y_{L}}$ is mean of labels in the left leaf, $\overline{y_{R}}$ is mean of labels in the right leaf.
+
+However, if we keep growning a deeper tree, the training sum squared error never increased.
+
+$$
+\sum^{L}_{i = 1} (y_{i} - \overline{y_{L}})^2 + \sum^{R}_{j = 1} (y_{j} - \overline{y_{R}})^2 \leq \sum^{S}_{i = 1} (y_{i} - \overline{y_{S}})^2 \\
+\text{where} \space L + R = S
+$$
+
+Since we want our future prediction robust, that is minimize the test error. Consider the bias and varaiance tradeoff, if we grow a deep tree, the decrease of bias might less than the increase of variance. That will increase the test error.
+
+If we measure the bias using training error, the variance can approximate with regularized term. Hence, our loss function can rewrite as,
+
+$$
+min \space  [\sum^{L}_{i = 1} (y_{i} - \overline{y_{L}})^2 + \sum^{R}_{j = 1} (y_{j} - \overline{y_{R}})^2 + \Omega]
+$$
 
 
 
@@ -40,5 +153,12 @@ In this note we focus on these 3 Gradient Boosting Decision Tree algorithms
 
 
 ### CatBoost
+
+
+
+
+
+
+
 
 
