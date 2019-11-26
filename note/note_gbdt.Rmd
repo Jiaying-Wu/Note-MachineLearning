@@ -19,13 +19,13 @@ In this note, first we will talk about the general framework of Gradient Boostin
 
 Gradient Boosting Decision Tree is an additive model,  the prediction of each observation in this model is the sum of each belonging gain of $D$ depths in $T$ trees.
 
-**As the predicted value of each observation start from 0, and each tree have the same depths (Not Pruned GBDT).** 
+**As the predicted value of each observation start from 0, and each tree have the same depths (Not pruned GBDT). In the pruned tree, the depth of end leaf might different.** 
 
 The model can written as:
 
 $$
 \hat{y_{i}} = 0 + \sum^{T}_{t = 1} f_{t}(x_{i}) = \sum^{T}_{t = 1} f_{t}(x_{i}) = \sum^{T}_{t = 1} \sum^{D}_{d = 1} gain_{\text{{t, d, l}}} \\
-\text{where} \space l \in \{1, 2, ..., 2^d \}
+\text{where} \space\space l \in \{1, 2, ..., 2^d \}, \space gain_{\text{{t, d, l}}} \space \text{might be 0 in a pruned tree}
 $$
 
 $\hat{y_{i}}$ is the predicted value of observation $i$.
@@ -48,11 +48,11 @@ In each depth, one observation can only have one gain value. Hence, the predicte
 
 **The image 1 is the pruned Gradient Boosting Decison Tree.**
 
-The image 1 shown, observations $i$ end up with {tree 1, depth 3, leaf 2}, end up wth {tree 2, depth 2, leaf 3} ..., and end up wth {tree K, depth 2, leaf 2}. Assume we start from 0 of all observations, the predicted value of observation $i$ is,
+The image 1 shown, observations $i$ end up with {tree 1, depth 3, leaf 2}, end up with {tree 2, depth 2, leaf 3} ..., and end up with {tree K, depth 2, leaf 2}. Assume we start from 0 of all observations, the predicted value of observation $i$ is,
 
 $$
 \begin{align*}
-\hat{y_{i}} &=  0 +(gain_{\text{{1, 1, 1}}} + gain_{\text{{1, 2, 1}}} + gain_{\text{{1, 3, 2}}}) + (gain_{\text{{2, 1, 2}}} + gain_{\text{{2, 2, 3}}} + gain_{\text{{2, 2, 3}}}) + ... + (gain_{\text{{K, 1, 1}}} +gain_{\text{{K, 2, 2}}}) \\ 
+\hat{y_{i}} &=  0 +(gain_{\text{{1, 1, 1}}} + gain_{\text{{1, 2, 1}}} + gain_{\text{{1, 3, 2}}}) + (gain_{\text{{2, 1, 2}}} + gain_{\text{{2, 2, 3}}}) + ... + (gain_{\text{{K, 1, 1}}} +gain_{\text{{K, 2, 2}}}) \\ 
 &= f_{1}(x_{i}) + f_{2}(x_{i}) + ... + f_{K}(x_{i})
 \end{align*}
 $$
@@ -92,43 +92,87 @@ $$
 Loss = \sum^{n}_{i = 1} (\hat{y_{i}} - y_{i})^2
 $$
 
-As the **predicted value start from 0**, the loss of first node in first tree just the sum squared value of the label.
+#### Express obervation as residual in GBDT
+
+Therefore, the loss in each leaf is the sum squared residuals. 
+
+**As the predicted value start from 0,**
 
 $$
-Loss_{1, 0, 1} = \sum^{n}_{i = 1} (\hat{y_{i}} - y_{i})^2 = \sum^{n}_{i = 1} (0 - y_{i})^2 = \sum^{n}_{i = 1} (- y_{i})^2 = \sum^{n}_{i = 1} (Residual_{i \text{{1,0,1}}})^2 \\
-\text{where}\space \mathbb{E}(Residual_{0, i}) \neq 0
+Loss_{1, 0, 1} = \sum^{n}_{i = 1} (\hat{y_{i}} - y_{i})^2 = \sum^{n}_{i = 1} (0 - y_{i})^2 = \sum^{n}_{i = 1} (- y_{i})^2 = \sum^{n}_{i = 1} (Residual_{i, \space \text{{1,0,1}}})^2 \\
+\text{where} \space\space \mathbb{E}(Residual_{i \text{{1,0,1}}}) \neq 0
 $$
 
-$Loss_{0, 0, 1}$ determine the initial loss in {tree 1, depth 0, leaf 1} as the predicted value start at 0.
+$Loss_{1, 0, 1}$ determine the loss in {tree 1, depth 0, leaf 1}.
 
-$Residual_{0, i}$ determine the initial residual of observation $i$ as predicted value start at 0.
+$Residual_{i \text{{1,0,1}}}$ determine the residual of observation $i$ as in {tree 1, depth 0, leaf 1}.
 
-After the initial node of fist tree, the model trying to **find the best split** that minimize the loss.
+As the predicted value start from 0, the ***residuals is the negative of label in the initial leaf of first tree***.
 
-$$
-\text{min} \space Loss = min \space  [\sum^{L}_{i = 1} (-y_{i} + \overline{y_{L}})^2 + \sum^{R}_{j = 1} (-y_{j} + \overline{y_{R}})^2] \\
-\text{where} \space \overline{y_{L}} = \frac{1}{L}\sum^{L}_{i = 1} -y_{i}, \space \overline{y_{R}} = \frac{1}{R}\sum^{R}_{j = 1} -y_{j}, \space L + R = S
-$$
+Hence, we can **express the observation in each leaf as residual** rather than actual value. 
 
-$S$ is the sample size in the node, $L$ is the sample size in the left leaf, $R$ is the sample size in the right leaf.
+It's easier to compute the loss, because **the squared residual is the individual loss of observation in each tree**.
 
-$y_{i}$ is label of observation $i$ in the left leaf, $y_{j}$ is label of observation $j$ in the right leaf.
 
-$\overline{y_{L}}$ is mean of labels in the left leaf, $\overline{y_{R}}$ is mean of labels in the right leaf.
+#### How to split the leaves?
 
-However, if we keep growning a deeper tree, the training sum squared error never increased.
+At each node, the model trying to **find the best split** that minimize the sum of loss in the left leaf and right leaf.
 
-$$
-\sum^{L}_{i = 1} (y_{i} - \overline{y_{L}})^2 + \sum^{R}_{j = 1} (y_{j} - \overline{y_{R}})^2 \leq \sum^{S}_{i = 1} (y_{i} - \overline{y_{S}})^2 \\
-\text{where} \space L + R = S
-$$
+![](https://www.salford-systems.com/blog/images/site/shapetrees1.jpg)
 
-Since we want our future prediction robust, that is minimize the test error. Consider the bias and varaiance tradeoff, if we grow a deep tree, the decrease of bias might less than the increase of variance. That will increase the test error.
+(Image 3 from salford systems)
 
-If we measure the bias using training error, the variance can approximate with regularized term. Hence, our loss function can rewrite as,
+The total loss in splited leaves is:
 
 $$
-min \space  [\sum^{L}_{i = 1} (y_{i} - \overline{y_{L}})^2 + \sum^{R}_{j = 1} (y_{j} - \overline{y_{R}})^2 + \Omega]
+Loss_{\text{{t, (d+1), Left}}} + Loss_{\text{{t, (d+1), Right}}}  = \sum^{L}_{l = 1} ({Residual}_{\text{{t, d, left}}} - \overline{{Residual}_{\text{{t, d, Left}}}})^2 + \sum^{R}_{r = 1} ({Residual}_{\text{{t, d, right}}} - \overline{{Residual}_{\text{{t, d, Right}}}})^2 \\
+\text{where} \space\space \overline{{Residual}_{\text{{t, d, Left}}}} = \frac{1}{L}\sum^{L}_{l = 1} {Residual}_{\text{{t, d, left}}}, \space \overline{{Residual}_{\text{{t, d, Right}}}} = \frac{1}{R}\sum^{R}_{r = 1} {Residual}_{\text{{t, d, right}}}, \space L + R = N
+$$
+
+$Loss_{\text{{t, (d+1), Left}}}$ is the loss of the left leaf.
+
+$Loss_{\text{{t, (d+1), Right}}}$ is the loss of the right leaf.
+
+${Residual}_{\text{{t, d, left}}}$ is the individual residual in root node that will be split into the left leaf.
+
+${Residual}_{\text{{t, d, right}}}$ is the individual residual in root node that will be split into the right leaf.
+
+$L$ is the sample size in left leaf.
+
+$R$ is the sample size in right leaf.
+
+$N$ is the sample size in root node.
+
+***The gain in each leaf is the mean of residual that split from root node.***
+
+
+#### Regularization in leaves split
+
+If we keep growing a deeper tree, the training loss won't converged until go down to 0.
+
+$$
+\sum^{L}_{l = 1} ({Residual}_{\text{{t, d, left}}} - \overline{{Residual}_{\text{{t, d, Left}}}})^2 + \sum^{R}_{r = 1} ({Residual}_{\text{{t, d, right}}} - \overline{{Residual}_{\text{{t, d, Right}}}})^2 \leq \sum^{R}_{r = 1} ({Residual}_{\text{{t, d, node}}} - \overline{{Residual}_{\text{{t, d, Node}}}})^2 \\
+\text{where} \space\space  \overline{{Residual}_{\text{{t, d, Node}}}} = \frac{1}{N}\sum^{N}_{n = 1} {Residual}_{\text{{t, d, node}}}, L + R = N
+$$
+
+${Residual}_{\text{{t, d, node}}}$ is the individual residual in root node.
+
+However, we want to minimize future prediction error, that is minimize the test error. 
+
+Base on the bias and variance trade-off, the bias will decreased and variance increased in a deeper tree. Hence, we need to balanced the bias and variance to minimize the test error.
+
+Consider the training error in GBDT as bias, we can approximate the variancewith regularized term. And the parameters select by cross validation.
+
+Then, the loss function can rewrite as:
+
+$$
+\sum^{L}_{l = 1} ({Residual}_{\text{{t, d, left}}} - \overline{{Residual}_{\text{{t, d, Left}}}})^2 + \sum^{R}_{r = 1} ({Residual}_{\text{{t, d, right}}} - \overline{{Residual}_{\text{{t, d, Right}}}})^2 + \Omega
+$$
+
+The split criteria is:
+
+$$
+\sum^{L}_{l = 1} ({Residual}_{\text{{t, d, left}}} - \overline{{Residual}_{\text{{t, d, Left}}}})^2 + \sum^{R}_{r = 1} ({Residual}_{\text{{t, d, right}}} - \overline{{Residual}_{\text{{t, d, Right}}}})^2 + \Omega < \sum^{R}_{r = 1} ({Residual}_{\text{{t, d, node}}} - \overline{{Residual}_{\text{{t, d, Node}}}})^2
 $$
 
 
