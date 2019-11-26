@@ -83,6 +83,7 @@ $$
 \hat{y_{girl}} = gain_{\text{{1, 1, 1}}} + gain_{\text{{2, 1, 2}}} = 2 - 0.9 = 1.1
 $$
 
+<br>
 
 ### How Gradient Boosting Decision Tree work?
 
@@ -92,7 +93,9 @@ $$
 Loss = \sum^{n}_{i = 1} (\hat{y_{i}} - y_{i})^2
 $$
 
-#### Express obervation as residual in GBDT
+<br>
+
+#### 1.Express obervation as residual in GBDT
 
 Therefore, the loss in each leaf is the sum squared residuals. 
 
@@ -113,8 +116,9 @@ Hence, we can **express the observation in each leaf as residual** rather than a
 
 It's easier to compute the loss, because **the squared residual is the individual loss of observation in each tree**.
 
+<br>
 
-#### How to split the leaves?
+#### 2.How to split the leaves?
 
 At each node, the model trying to **find the best split** that minimize the sum of loss in the left leaf and right leaf.
 
@@ -145,13 +149,14 @@ $N$ is the sample size in root node.
 
 ***The gain in each leaf is the mean of residual that split from root node.***
 
+<br>
 
-#### Regularization in leaves split
+#### 3.Regularization in leaves split
 
 If we keep growing a deeper tree, the training loss won't converged until go down to 0.
 
 $$
-\sum^{L}_{l = 1} ({Residual}_{\text{{t, d, left}}} - \overline{{Residual}_{\text{{t, d, Left}}}})^2 + \sum^{R}_{r = 1} ({Residual}_{\text{{t, d, right}}} - \overline{{Residual}_{\text{{t, d, Right}}}})^2 \leq \sum^{R}_{r = 1} ({Residual}_{\text{{t, d, node}}} - \overline{{Residual}_{\text{{t, d, Node}}}})^2 \\
+\sum^{L}_{l = 1} ({Residual}_{\text{{t, d, left}}} - \overline{{Residual}_{\text{{t, d, Left}}}})^2 + \sum^{R}_{r = 1} ({Residual}_{\text{{t, d, right}}} - \overline{{Residual}_{\text{{t, d, Right}}}})^2 \leq \sum^{N}_{n = 1} ({Residual}_{\text{{t, d, node}}} - \overline{{Residual}_{\text{{t, d, Node}}}})^2 \\
 \text{where} \space\space  \overline{{Residual}_{\text{{t, d, Node}}}} = \frac{1}{N}\sum^{N}_{n = 1} {Residual}_{\text{{t, d, node}}}, L + R = N
 $$
 
@@ -166,16 +171,25 @@ Consider the training error in GBDT as bias, we can approximate the variancewith
 Then, the loss function can rewrite as:
 
 $$
-\sum^{L}_{l = 1} ({Residual}_{\text{{t, d, left}}} - \overline{{Residual}_{\text{{t, d, Left}}}})^2 + \sum^{R}_{r = 1} ({Residual}_{\text{{t, d, right}}} - \overline{{Residual}_{\text{{t, d, Right}}}})^2 + \Omega
+\sum^{L}_{l = 1} ({Residual}_{\text{{t, d, left}}} - \overline{{Residual}_{\text{{t, d, Left}}}})^2 + \Omega_{\text{{t, (d+1), Left}}} +  \sum^{R}_{r = 1} ({Residual}_{\text{{t, d, right}}} - \overline{{Residual}_{\text{{t, d, Right}}}})^2 + \Omega_{\text{{t, (d+1), Right}}}
 $$
 
 The split criteria is:
 
 $$
-\sum^{L}_{l = 1} ({Residual}_{\text{{t, d, left}}} - \overline{{Residual}_{\text{{t, d, Left}}}})^2 + \sum^{R}_{r = 1} ({Residual}_{\text{{t, d, right}}} - \overline{{Residual}_{\text{{t, d, Right}}}})^2 + \Omega < \sum^{R}_{r = 1} ({Residual}_{\text{{t, d, node}}} - \overline{{Residual}_{\text{{t, d, Node}}}})^2
+\sum^{L}_{l = 1} ({Residual}_{\text{{t, d, left}}} - \overline{{Residual}_{\text{{t, d, Left}}}})^2 + \Omega_{\text{{t, (d+1), Left}}} + \sum^{R}_{r = 1} ({Residual}_{\text{{t, d, right}}} - \overline{{Residual}_{\text{{t, d, Right}}}})^2 + \Omega_{\text{{t, (d+1), Right}}} \\
+< \sum^{N}_{n = 1} ({Residual}_{\text{{t, d, node}}} - \overline{{Residual}_{\text{{t, d, Node}}}})^2 + \Omega_{\text{{t, d, Node}}} \\
+\text{where} \space\space \Omega_{\text{{t, (d+1), Left}}} + \Omega_{\text{{t, (d+1), Right}}} > \Omega_{\text{{t, d, Node}}} 
 $$
+<br>
+
+#### 4.Limit the depth of each tree
 
 
+
+
+
+<br>
 
 ### XGBoost
 
@@ -184,7 +198,7 @@ $$
 
 
 
-
+<br>
 
 ### LightGBM
 
@@ -194,7 +208,7 @@ $$
 
 
 
-
+<br>
 
 ### CatBoost
 
