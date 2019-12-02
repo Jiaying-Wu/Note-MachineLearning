@@ -1,25 +1,47 @@
 ---
 title: "Note of Gradient Boosting Decision Tree"
 author: Jiaying Wu
-output: html_notebook
+output: html_document
 ---
 
-### Overview
+## Overview
 
-In this note, first we will talk about the general framework of Gradient Boosting Decision Tree (GBDT), then we will focus on these 3 Gradient Boosting Decision Tree algorithms:
+In this note, first we will talk about the general framework of Gradient Boosting Decision Tree (GBDT), then we will focus on the different in 3 Gradient Boosting Decision Tree algorithms.
 
-* [XGBoost](https://xgboost.readthedocs.io/en/latest/)
+* 1.Gradient Boosting Decision Tree
 
-* [LightGBM](https://lightgbm.readthedocs.io/en/latest/)
+    * 1.1 What is Gradient Boosting Decision Tree?
+  
+    * 1.2 How to train a Gradient Boosting Decision Tree?
 
-* [CatBoost](https://catboost.ai)
+* 2.[XGBoost](https://xgboost.readthedocs.io/en/latest/)
+
+    * 2.1 The regularization term in XGBoost
+    
+    * 2.2
+
+* 3.[LightGBM](https://lightgbm.readthedocs.io/en/latest/)
+
+    * 3.1 The regularization term in LightGBM
+    
+    * 3.2
+
+* 4.[CatBoost](https://catboost.ai)
+
+    * 4.1 The regularization term in CatBoost
+    
+    * 4.2
 
 
-### What is Gradient Boosting Decision Tree?
+## 1.Gradient Boosting Decision Tree
+
+### 1.1 What is Gradient Boosting Decision Tree?
 
 Gradient Boosting Decision Tree is an additive model,  the prediction of each observation in this model is the sum of each belonging gain of $D$ depths in $T$ trees.
 
-**As the predicted value of each observation start from 0, and each tree have the same depths (Not pruned GBDT). In the pruned tree, the depth of end leaf might different.** 
+Then, we can **express the predicted value as ensemble gain of every level in each tree**.
+
+As the predicted value of each observation **start from 0**, and each tree have the **same depths (Not pruned GBDT)**. In the pruned tree, the depth of end leaf might different. 
 
 The model can written as:
 
@@ -39,6 +61,10 @@ $f_{t}(x_{i})$ is sum of gain in $t_{th}$ decision tree.
 In $gain_{\text{{t, d, l}}}$, $t$ determine the $t_{th}$ tree, $d$ determine the $d_{th}$ depth, $l$ determine the $l_{th}$ leaf.
 
 In each depth, one observation can only have one gain value. Hence, the predicted value in **not pruned GBDT** of observation $i$ is the sum of the $(T*D)$ gain value.
+
+<br>
+
+#### 1.1.1 Visualize the ensemble gain of Gradient Boosting Decision Tree
 
 **Pruned means we prune the leaves of GBDT from bottom to top of each tree.**
 
@@ -61,7 +87,11 @@ In $gain_{\text{{t, d, l}}}$, $t$ determine the $t_{th}$ tree, $d$ determine the
 
 The possible number of leaf in depth $d$ is $2^{d}$.
 
-![](https://raw.githubusercontent.com/dmlc/web-data/master/xgboost/model/twocart.png)
+<br>
+
+#### 1.1.2 Make prediction in Gradient Boosting Decision Tree
+
+![](https://raw.githubusercontent.com/dmlc/web-data/master/xgboost/model/twocart.png){width="60%" height="60%"}
 
 (Image 2 from dmlc/xgboost)
 
@@ -85,25 +115,21 @@ $$
 
 <br>
 
-### How Gradient Boosting Decision Tree work?
+### 1.2 How to train a Gradient Boosting Decision Tree?
 
-Assuming we measure the loss using **total sum squared error**, our **goal** is to **minimize** the total sum squared error.
+Assuming we measure the training loss using total sum squared error,
 
 $$
 Loss = \sum^{n}_{i = 1} (\hat{y_{i}} - y_{i})^2
 $$
 
-<br>
+Then, **we can express the training loss in term of residual**. 
 
-#### 1.Express obervation as residual in GBDT
-
-Therefore, the loss in each leaf is the sum squared residuals. 
-
-**As the predicted value start from 0,**
+**The loss in each leaf is the sum squared residuals as the predicted value start from 0**.
 
 $$
 Loss_{1, 0, 1} = \sum^{n}_{i = 1} (\hat{y_{i}} - y_{i})^2 = \sum^{n}_{i = 1} (0 - y_{i})^2 = \sum^{n}_{i = 1} (- y_{i})^2 = \sum^{n}_{i = 1} (Residual_{i, \space \text{{1,0,1}}})^2 \\
-\text{where} \space\space \mathbb{E}(Residual_{i \text{{1,0,1}}}) \neq 0
+\text{where} \space\space \mathbb{E}(Residual_{i \text{{1,0,1}}}) \neq 0 \space \text{in general}
 $$
 
 $Loss_{1, 0, 1}$ determine the loss in {tree 1, depth 0, leaf 1}.
@@ -118,11 +144,11 @@ It's easier to compute the loss, because **the squared residual is the individua
 
 <br>
 
-#### 2.How to split the leaves?
+#### 1.2.1 How to split the leaves?
 
 At each node, the model trying to **find the best split** that minimize the sum of loss in the left leaf and right leaf.
 
-![](https://www.salford-systems.com/blog/images/site/shapetrees1.jpg)
+![](https://www.salford-systems.com/blog/images/site/shapetrees1.jpg){width="30%" height="30%"}
 
 (Image 3 from salford systems)
 
@@ -149,9 +175,24 @@ $N$ is the sample size in root node.
 
 ***The gain in each leaf is the mean of residual that split from root node.***
 
+$$
+gain_{\text{{t, d, l}}} = 
+\begin{cases} 
+\overline{{Residual}_{\text{{t, (d-1), Left}}}} & l \text{ is the left leaf} \\
+\overline{{Residual}_{\text{{t, (d-1), Right}}}} & l \text{ is the right leaf}
+\end{cases}
+$$
+
+$gain_{\text{{t, d, l}}}$ is the gain in {tree t, depth d, leaf l}.
+
+${Residual}_{\text{{t, (d-1), Left}}}$ is the left split residual from the root node of {tree t, depth d, leaf l}.
+
+${Residual}_{\text{{t, (d-1), Right}}}$ is the right split residual from the root node of {tree t, depth d, leaf l}.
+
 <br>
 
-#### 3.Regularization in leaves split
+
+#### 1.2.2 Regularization in leaves split
 
 If we keep growing a deeper tree, the training loss won't converged until go down to 0.
 
@@ -168,6 +209,10 @@ Base on the bias and variance trade-off, the bias will decreased and variance in
 
 Consider the training error in GBDT as bias, we can approximate the variancewith regularized term. And the parameters select by cross validation.
 
+<br>
+
+#### 1.2.3 The criteria to split the leaves
+
 Then, the loss function can rewrite as:
 
 $$
@@ -181,17 +226,63 @@ $$
 < \sum^{N}_{n = 1} ({Residual}_{\text{{t, d, node}}} - \overline{{Residual}_{\text{{t, d, Node}}}})^2 + \Omega_{\text{{t, d, Node}}} \\
 \text{where} \space\space \Omega_{\text{{t, (d+1), Left}}} + \Omega_{\text{{t, (d+1), Right}}} > \Omega_{\text{{t, d, Node}}} 
 $$
-<br>
-
-#### 4.Limit the depth of each tree
-
-
-
-
 
 <br>
 
-### XGBoost
+#### 1.2.4 Limit the function space of tree
+
+In order to avoid overfitting, we will set the hard threshold to limit the depth and/or end leaves of each tree in GBDT.
+
+**1.Limit the depth in each tree**
+
+For a relatived large sample, we can set the maximum depths of each tree as 5.
+
+Then, the maximum end leaves of each tree is $2^d = 2^5 = 32$. 
+
+Each end leaf associated with at most interaction of 5 variables. Since we search thorught all the variavles in each split.
+
+For example, we can split the obervation into leaf {1, A} and leaf {1, B} base on {is age younger than 30?} in depth 1. Then, leaf {1, B} split into leaf {2, C} and leaf {2, D} base on {is age younger than 60?} in depth 2.
+
+The end leaf can be:
+
+{1, A}: age younger than 30.
+
+{2, C}; age older and equal to 30 but younger than 60.
+
+{2, D}; age older and equal to 60.
+
+**Limit the depth can prevent the model grown a large (deep) tree, large tree will suffer form large variance in out of sample prediction.**
+
+Also, less 
+
+![](https://openstax.org/resources/ac97e737d79567167c2776305b494f01009d948a)
+
+(Image 4 from openstax)
+
+
+**2.Limit the end leaves in each tree**
+
+
+
+<br>
+
+#### 1.2.5 Strategies to grow the tree
+
+**1.leaf-wise**
+
+
+
+
+
+**2. level-wise**
+
+
+
+
+
+<br>
+
+### 2.![](https://upload.wikimedia.org/wikipedia/commons/6/69/XGBoost_logo.png){width="15%" height="15%"}
 
 
 
@@ -200,7 +291,7 @@ $$
 
 <br>
 
-### LightGBM
+### 3.![](https://cambridgespark.com/wp-content/uploads/2018/10/lightGBM-logo.png){width="18%" height="18%"}
 
 
 
@@ -210,11 +301,16 @@ $$
 
 <br>
 
-### CatBoost
+### 4.![](https://camo.githubusercontent.com/1ba204e6a09e6f13c919dcf961fe5a9a7f2d6e30/687474703a2f2f73746f726167652e6d64732e79616e6465782e6e65742f6765742d646576746f6f6c732d6f70656e736f757263652f3235303835342f636174626f6f73742d6c6f676f2e706e67){width="25%" height="25%"}
 
 
 
 
+
+
+
+
+<br>
 
 
 
