@@ -1,3 +1,3 @@
 
-Note for Machine Learning
-=========================
+Note of Machine Learning
+========================
