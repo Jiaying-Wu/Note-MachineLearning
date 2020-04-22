@@ -1,5 +1,5 @@
 ---
-title: "Feature Engineering"
+title: "Note of Feature Engineering for Machine Learning"
 author: Jiaying Wu
 output: html_document
 ---
@@ -14,15 +14,17 @@ knitr::opts_chunk$set(
   fig.path = "plot/",
   fig.align = "center"
 )
+```
 
+```{r use_python}
 # use python
 library(reticulate)
-use_python("/usr/local/bin/python")
+use_python(py_config()[1])
 ```
 
 ## Overview
 
-This notebook is the note of the book `Feature Engineering for Machine Learning`.
+This notebook is the note of the book `Feature Engineering for Machine Learning`, the image in this note also form the book.
 
 Each chapter of this book addresses one data problem:
 
@@ -103,7 +105,7 @@ If the scale of the input grows over time, which is the case if the feature is a
 
 Taken to an extreme, complex features may themselves be the output of statistical models.
 
-#### Scalars, Vectors, and Spaces
+#### 2.1 Scalars, Vectors, and Spaces
 
 `Scalar`: A single numeric feature.
 
@@ -111,13 +113,296 @@ Taken to an extreme, complex features may themselves be the output of statistica
 
 `Space`: Vectors sit within a vector space.
 
+![](plot/feature_space versus_data_space.png)
+
+#### 2.2 Dealing with Counts
+
+When data can be produced at high volume and velocity, it’s very likely to contain a few extreme values. It is a good idea to check the scale and determine whether to keep the data as raw numbers, convert them into binary values to indicate presence, or bin them into coarser granularity.
+
+##### 2.2.1 Binarization
+
+The [Echo Nest Taste Profile subset](http://millionsongdataset.com/pages/code/index.html), the official user data collection for the Million Song Dataset, contains the full music listening histories of one million users on Echo Nest.
+
+* There are more than 48 million triplets of `user ID`, `song ID`, and `listen count`.
+
+* The full dataset contains 1,019,318 unique `users` and 384,546 unique `songs`.
+
+Task: build a recommender to recommend songs to users. One component of the recommender might predict how much a user will enjoy a particular song.
+
+Some people might put their favorite songs on infinite loop, while others might savor them only on special occasions. We can’t necessarily say that someone who listens to a song 20 times must like it twice as much as someone else who listens to it 10 times.
+
+![](plot/Histogram_listen_counts.png)
+
+A more robust representation of user preference is to binarize the count and clip all counts greater than 1 to 1. In other words, **if the user listened to a song at least once, then we count it as the user liking the song**.
+
+This way, the model will **not need to** spend cycles on **predicting the minute** differences between the raw counts. The binary **target** is a simple and robust measure of **user preference**.
+
+This is an example where we **engineer the target variable** of the model.
+
+##### 2.2.2 Quantization or Binning
+
+[Yelp Open Dataset](https://www.yelp.com/dataset) contains user reviews of businesses from 10 cities across North America and Europe.
+
+Dataset in 2020.04.21:
+
+![](plot/yelp_dataset.png)
+
+Each business has a review count. 
+
+Task: use collaborative filtering to predict the rating a user might give to a business.
+
+![](plot/histogram_yelp.png)
+
+Most of the counts are small, but some businesses have reviews in the thousands.
+
+Raw counts that span several orders of magnitude are problematic for many models.
+
+In a `linear model`, the same linear coefficient would have to work for all possible values of the count.
+
+Large counts could also wreak havoc in `unsupervised learning methods` such as `k-means clustering`, which uses **Euclidean distance** as a similarity function to measure the similarity between data points. A **large count** in one element of the data vector would **outweigh the similarity** in all other elements, which could throw off the entire similarity measurement.
+
+Solution: contain the scale by **quantizing** the count. Group the counts into bins, and get rid of the actual count values. Quantization maps a continuous number to a discrete one.
+
+In order to quantize data, we have to decide how wide each bin should be. The solutions fall into two categories: `fixed-width` or `adaptive`.
+
+##### 2.2.2.1 Fixed-width binning
+
+With fixed-width binning, **each bin contains a specific numeric range**. The ranges can be *custom designed* or *automatically segmented*, and they can be *linearly scaled* or *exponentially scaled*.
+
+Custom-designed age ranges that better correspond to stages of life:
+
+* 0–12 years old
+
+* 12–17 years old
+
+* 18–24 years old
+
+* 25–34 years old
+
+* 35–44 years old
+
+* 45–54 years old
+
+* 55–64 years old
+
+* 65–74 years old
+
+* 75 years or older
+
+When the numbers span multiple magnitudes, it may be better to group by powers of 10. Exponential-width binning is very much related to the log transform.
+
+Quantizing counts with fixed-width bins:
+
+```{python quant_fw_bin}
+# 2-3 Quantizing counts with fixed-width bins
+import numpy as np
+
+# Generate 20 random integers uniformly between 0 and 99
+np.random.seed(1)
+small_counts = np.random.randint(0, 100, 20)
+print(small_counts)
+
+# Map to evenly spaced bins 0-9 by division
+np.floor_divide(small_counts, 10)
 
 
+# An array of counts that span several magnitudes
+large_counts = [296, 8286, 64011, 80, 3, 725, 867, 2215, 7689, 11495, 91897, 44, 28, 7971, 926, 122, 22222]
 
+# Map to exponential-width bins via the log function
+print(np.floor(np.log10(large_counts)))
+```
 
+##### 2.2.2.2 Quantile binning
 
+Problem of fixed-width binning: if there are large gaps in the counts, then there will be many empty bins with no data.
 
+Solution: adaptively positioning the bins based on the distribution of the data.
 
+`Quantiles`: values that divide the data into equal portions.
 
+![](plot/Quantile_binning.png)
+
+```{python bin_quant}
+# 2-5 Binning counts by quantiles
+# Continue example 2-3 with large_counts
+import pandas as pd
+
+# Map the counts to quartiles
+large_counts = [296, 8286, 64011, 80, 3, 725, 867, 2215, 7689, 11495, 91897, 44, 28, 7971, 926, 122, 22222]
+print(pd.qcut(large_counts, 4, labels=False))
+
+# Compute the quantiles themselves
+large_counts_series = pd.Series(large_counts)
+print(large_counts_series.quantile([0.25, 0.5, 0.75]))
+```
+
+#### 2.3 Log Transformation
+
+Taking the logarithm of the count to map the data to exponential-width bins, the log function compresses the range of large numbers and expands the range of small numbers.
+
+![](plot/log_transform.png)
+
+The log transform is a powerful tool for dealing with positive numbers with a heavy-tailed distribution.
+
+![](plot/log_transform_yelp.png)
+
+##### 2.3.1 Log Transform in Action
+
+![](plot/log_transform_online_news.png)
+
+The log transform reshaped the x-axis, pulling the articles with large outliers in the target value (>200,000 shares) further out toward the righthand side of the axis.
+
+Without the log transform (top panel), the model is under more pressure to fit very different target values under very small changes in the input.
+
+When building models, it is a good idea to visually inspect the relationships between input and output, and between different input features.
+
+![](plot/yelp_corr.png)
+
+High review counts (roughly >2,500 reviews) do correlate with higher average star ratings, but the relationship is far from linear
+
+##### 2.3.2 Power Transforms: Generalization of the Log Transform
+
+The log transform is a specific example of a family of transformations known as power transforms. These are variance-stabilizing transformations in statistic. 
+
+To understand why variance stabilization is good, consider the Poisson distribution. This is a heavy-tailed distribution with a variance that is equal to its mean: hence, the larger its center of mass, the larger its variance, and the heavier the tail.
+
+Power transforms change the distribution of the variable so that the variance is no longer dependent on the mean.
+
+![](plot/possion_distribution.png)
+
+Illustrates $\lambda$, which represents the mean of the distribution. As $\lambda$ increases, not only does the mode of the distribution shift to the right, but the mass spreads out and the variance becomes larger.
+
+Box-Cox transform:
+
+![](plot/Box_Cox_transform.png)
+
+![](plot/box_cox_lambda.png)
+
+Setting $\lambda$ to be less than 1 compresses the higher values, and setting $\lambda$ higher than 1 has the opposite effect.
+
+The Box-Cox formulation only works when the data is positive. For nonpositive data, one could shift the values by adding a fixed constant.
+
+When applying the Box-Cox transformation or a more general power transform, we have to determine a value for the parameter $\lambda$. This may be done via maximum likelihood or Bayesian methods.
+
+Visual comparison of the distributions of the original and transformed counts:
+
+![](plot/box_cox_yelp.png)
+
+![](plot/box_cox_yelp_qqplot.png)
+
+The ordered values go up to 4000, whereas the theoretical quantiles only stretch to 4.
+
+The optimal Box-Cox transform deflates the tail more than the log transform, as is evident from the fact that the tail flattens out under the red diagonal equivalence line.
+
+#### 2.4 Feature Scaling or Normalization
+
+Some features, such as latitude or longitude, are bounded in value. Other numeric features, such as counts, may increase without bound.
+
+Models that are smooth functions are affected by the scale of the input. Tree-based models not affect by the scale. If the model is sensitive to the scale of input features, feature scaling could help.
+
+Feature scaling is usually done individually to each feature.
+
+##### 2.4.1 Min-Max Scaling
+
+Min-max scaling squeezes all feature values to be within the range of [0, 1].
+
+The formula for min-max scaling is:
+
+![](plot/min_max_scaling.png)
+
+![](plot/Min_max_scaling_illu.png)
+
+##### 2.4.2 Standardization (Variance Scaling)
+
+Feature standardization is defined as:
+
+![](plot/Variance_Scaling_fomula.png)
+
+It subtracts off the mean of the feature (over all data points) and divides by the variance. The resulting scaled feature has a mean of 0 and a variance of 1.
+
+![](plot/standardization_illu.png)
+
+If the shift is not zero, then these two transforms can turn a sparse feature vector where most values are zero into a dense one. This in turn could create a huge computational burden for the classifier, depending on how it is implemented.
+
+Bag-of-words is a sparse representation, and most classification libraries optimize for sparse inputs.
+
+##### 2.4.3 L2 Normalization
+
+L2 norm  also known as the Euclidean norm. It’s defined as follows:
+
+![](plot/L2_norm.png)
+
+The L2 norm measures the length of the vector in coordinate space.
+
+![](plot/L2_norm_length.png)
+
+The L2 norm sums the squares of the values of the features across data points, then takes the square root.
+
+After L2 normalization, the feature column has norm 1.
+
+![](plot/L2_norm_illu.png)
+
+The illustration in in data space, not feature space.
+
+Feature scaling of online news article token counts:
+
+![](plot/online_news_feature_scaling.png)
+
+Feature scaling is useful in situations where a set of input features differs wildly in scale.
+
+For instance, the number of daily visitors to a popular ecommerce site might be a hundred thousand, while the actual number of sales might be in the thousands.
+
+#### 2.5 Interaction Features
+
+A simple pairwise `interaction feature` is the product of two features.
+
+![](plot/interaction_feature_linear_model.png)
+
+This allows us to capture interactions between features.
+
+If $x_1$ and $x_2$ are binary, then their product $x_1 x_2$ is the logical function $x_1$ AND $x_2$ .
+
+In example, instead of making predictions based solely on the age or location of the user, interaction features allow the model to make predictions based on the user being of a certain age AND at a particular location.
+
+Interaction features are very simple to formulate, but they are expensive to use.
+
+The training and scoring time of a linear model with pairwise interaction features would go from $O(n)$ to $O(n^2)$, where n is the number of singleton features.
+
+Handcrafted complex features can be expressive enough that only a small number of them are needed, which reduces the training time of the model. But the features themselves may be expensive to compute, which increases the computational cost of the model scoring stage.
+
+#### 2.6 Feature Selection
+
+Feature selection techniques prune away nonuseful features in order to reduce the complexity of the resulting model. 
+
+The end goal is a parsimonious model that is quicker to compute, with little or no degradation in predictive accuracy.
+
+Feature selection is not about reducing training time—in fact, some techniques increase overall training time, but about reducing model scoring time.
+
+Feature selection techniques fall into three classes:
+
+##### Filtering
+
+Filtering techniques preprocess features to remove ones that are unlikely to be useful for the model.
+
+For example, one could compute the correlation or mutual information between each feature and the response variable, and filter out the features that fall below a threshold.
+
+Filtering techniques are much cheaper than the wrapper techniques, but it may not be able to select the right features for the model.
+
+##### Wrapper methods
+
+These techniques are expensive, but they allow you to try out subsets of features. It won’t accidentally prune away features that are uninformative by themselves but useful when taken in combination.
+
+##### Embedded methods
+
+These methods perform feature selection as part of the model training process.
+
+For example, a decision tree inherently performs feature selection because it selects one feature on which to split the tree at each training step.
+
+Another example is the L1 regularizer, it encourages models that use a few features as opposed to a lot of features.
+
+Embedded methods incorporate feature selection as part of the model training process. They are not as powerful as wrapper methods, but they are nowhere near as expensive.
+
+Embedded methods strike a balance between computational expense and quality of results.
 
 
