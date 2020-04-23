@@ -1,0 +1,18 @@
+---
+output: github_document
+---
+
+```{r setup, include = FALSE}
+# The README markdown generate by this rmd file, please edit the content within this R markdown.
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  message = FALSE,
+  fig.path = "plot/",
+  fig.align = "center",
+  echo = FALSE
+)
+```
+
+# Note of Feature Engineering
+
+This sub-repo is the note of the book [`Feature Engineering for Machine Learning`](http://shop.oreilly.com/product/0636920049081.do).

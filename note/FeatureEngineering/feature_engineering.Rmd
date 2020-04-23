@@ -24,7 +24,7 @@ use_python(py_config()[1])
 
 ## Overview
 
-This notebook is the note of the book `Feature Engineering for Machine Learning`, the image in this note also form the book.
+This notebook is the note of the book [`Feature Engineering for Machine Learning`](http://shop.oreilly.com/product/0636920049081.do), the image in this note also form the book.
 
 Each chapter of this book addresses one data problem:
 
@@ -404,5 +404,34 @@ Another example is the L1 regularizer, it encourages models that use a few featu
 Embedded methods incorporate feature selection as part of the model training process. They are not as powerful as wrapper methods, but they are nowhere near as expensive.
 
 Embedded methods strike a balance between computational expense and quality of results.
+
+
+### Chapter 3: Text Data: Flattening, Filtering, and Chunking
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
