@@ -1,7 +1,8 @@
 ---
 title: "Note of Gradient Boosting Decision Tree"
 author: "Jiaying Wu"
-output: html_document
+output:
+  html_document: default
 ---
 
 ## Overview
@@ -303,6 +304,4 @@ The Central Limit Theorem also implies the **standard deviation** of the samplin
 
 (Image 8 from StackExchange)
 
-```{r echo=FALSE, eval=FALSE, message=FALSE}
-rmarkdown::render(input = "note_gbdt.Rmd", output_format = "github_document", output_file = "README.md")
-```
+
