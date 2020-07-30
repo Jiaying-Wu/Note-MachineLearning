@@ -1,6 +1,6 @@
 ---
 title: "Note of Gradient Boosting Decision Tree"
-author: Jiaying Wu
+author: "Jiaying Wu"
 output: html_document
 ---
 
@@ -67,10 +67,10 @@ In each depth, one observation can only have one gain value. Hence, the predicte
 The image 1 shown, observations $i$ end up with {tree 1, depth 3, leaf 2}, end up with {tree 2, depth 2, leaf 3} ..., and end up with {tree T, depth 2, leaf 2}. Assume we start from 0 of all observations, the predicted value of observation $i$ is,
 
 $$
-\begin{align*}
+\begin{align}
 \hat{y_{i}} &=  0 +(gain_{\text{{1, 1, 1}}} + gain_{\text{{1, 2, 1}}} + gain_{\text{{1, 3, 2}}}) + (gain_{\text{{2, 1, 2}}} + gain_{\text{{2, 2, 3}}}) + ... + (gain_{\text{{T, 1, 1}}} +gain_{\text{{T, 2, 2}}}) \\ 
 &= f_{1}(x_{i}) + f_{2}(x_{i}) + ... + f_{T}(x_{i})
-\end{align*}
+\end{align}
 $$
 
 In $gain_{\text{{t, d, l}}}$, $t$ determine the $t_{th}$ tree, $d$ determine the $d_{th}$ depth, $l$ determine the $l_{th}$ leaf.
@@ -303,41 +303,6 @@ The Central Limit Theorem also implies the **standard deviation** of the samplin
 
 (Image 8 from StackExchange)
 
-
-
-<br>
-
-## 2.![](https://upload.wikimedia.org/wikipedia/commons/6/69/XGBoost_logo.png){width="15%" height="15%"}
-
-
-
-
-
-
-<br>
-
-## 3.![](https://cambridgespark.com/wp-content/uploads/2018/10/lightGBM-logo.png){width="18%" height="18%"}
-
-
-
-
-
-
-
-<br>
-
-## 4.![](https://camo.githubusercontent.com/1ba204e6a09e6f13c919dcf961fe5a9a7f2d6e30/687474703a2f2f73746f726167652e6d64732e79616e6465782e6e65742f6765742d646576746f6f6c732d6f70656e736f757263652f3235303835342f636174626f6f73742d6c6f676f2e706e67){width="25%" height="25%"}
-
-
-
-
-
-
-
-
-<br>
-
-
-
-
-
+```{r echo=FALSE, eval=FALSE, message=FALSE}
+rmarkdown::render(input = "note_gbdt.Rmd", output_format = "github_document", output_file = "README.md")
+```
